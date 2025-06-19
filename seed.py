@@ -1,6 +1,5 @@
 # seed.py
-from app import app
-from models import db, Hero, Power, HeroPower
+from app import app, db, Hero, Power, HeroPower
 
 with app.app_context():
     # Clear existing data
@@ -48,6 +47,8 @@ with app.app_context():
         HeroPower(hero_id=10, power_id=2, strength="Average")
     ]
     db.session.add_all(hero_powers)
+
+    __all__ = ['app', 'db', 'Hero', 'Power', 'HeroPower']
 
     db.session.commit()
     print("Database seeded successfully!")

@@ -1,98 +1,70 @@
-# app.py
-from flask import Flask, request, jsonify
+from flask import Flask,request, jsonify
+from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from models import db, Hero, Power, HeroPower
+from flask_cors import CORS
+
+from models import db, Hero, Power, HeroPower  # import db from models
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///superheroes.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-migrate = Migrate(app, db)
 db.init_app(app)
+migrate = Migrate(app, db)
+CORS(app)
 
-@app.route('/')
-def home():
-    return 'Superheroes API'
-
-# GET /heroes
-@app.route('/heroes', methods=['GET'])
+@app.route("/heroes", methods=["GET"])
 def get_heroes():
     heroes = Hero.query.all()
-    heroes_data = [hero.to_dict() for hero in heroes]
-    return jsonify(heroes_data)
+    return jsonify([h.to_dict() for h in heroes])
 
-# GET /heroes/:id
-@app.route('/heroes/<int:id>', methods=['GET'])
+@app.route("/heroes/<int:id>", methods=["GET"])
 def get_hero(id):
-    hero = Hero.Session.get(id)
+    hero = Hero.query.get(id)
     if not hero:
-        return jsonify({'error': 'Hero not found'}), 404
-    
-    hero_data = hero.to_dict()
-    hero_data['hero_powers'] = []
-    
-    for hp in hero.hero_powers:
-        hero_power_data = {
-            'id': hp.id,
-            'hero_id': hp.hero_id,
-            'power_id': hp.power_id,
-            'strength': hp.strength,
-            'power': hp.power.to_dict()
-        }
-        hero_data['hero_powers'].append(hero_power_data)
-    
-    return jsonify(hero_data)
+        return jsonify({"error": "Hero not found"}), 404
+    return jsonify(hero.to_dict_with_powers())
 
-# GET /powers
-@app.route('/powers', methods=['GET'])
+@app.route("/powers", methods=["GET"])
 def get_powers():
     powers = Power.query.all()
-    powers_data = [power.to_dict() for power in powers]
-    return jsonify(powers_data)
+    return jsonify([p.to_dict() for p in powers])
 
-# GET /powers/:id
-@app.route('/powers/<int:id>', methods=['GET'])
+@app.route("/powers/<int:id>", methods=["GET"])
 def get_power(id):
-    power = Power.Session.get(id)
+    power = Power.query.get(id)
     if not power:
-        return jsonify({'error': 'Power not found'}), 404
+        return jsonify({"error": "Power not found"}), 404
     return jsonify(power.to_dict())
 
-# PATCH /powers/:id
-@app.route('/powers/<int:id>', methods=['PATCH'])
+@app.route("/powers/<int:id>", methods=["PATCH"])
 def update_power(id):
-    power = Power.Session.get(id)
+    power = Power.query.get(id)
     if not power:
-        return jsonify({'error': 'Power not found'}), 404
-    
+        return jsonify({"error": "Power not found"}), 404
+
     data = request.get_json()
     try:
-        if 'description' in data:
-            power.description = data['description']
+        power.description = data["description"]
         db.session.commit()
         return jsonify(power.to_dict())
-    except ValueError as e:
-        db.session.rollback()
-        return jsonify({'errors': [str(e)]}), 400
+    except Exception as e:
+        return jsonify({"errors": [str(e)]}), 400
 
-# POST /hero_powers
-@app.route('/hero_powers', methods=['POST'])
+@app.route("/hero_powers", methods=["POST"])
 def create_hero_power():
     data = request.get_json()
-    
     try:
         hero_power = HeroPower(
-            strength=data['strength'],
-            hero_id=data['hero_id'],
-            power_id=data['power_id']
+            strength=data["strength"],
+            power_id=data["power_id"],
+            hero_id=data["hero_id"]
         )
         db.session.add(hero_power)
         db.session.commit()
-        
-        return jsonify(hero_power.to_dict()), 201
-    except ValueError as e:
-        db.session.rollback()
-        return jsonify({'errors': [str(e)]}), 400
+        return jsonify(hero_power.to_dict_full()), 201
+    except Exception as e:
+        return jsonify({"errors": [str(e)]}), 400
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5555, debug=True)
+    app.run(debug=True)

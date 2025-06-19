@@ -20,8 +20,8 @@ SQLite
 
 Clone the Repository:
 
-git clone <your_repo_url>
-cd superheroes-api
+git clone https://github.com/RoseofKendy/superheroes
+cd superheroes
 
 Create Virtual Environment & Install Dependencies:
 
